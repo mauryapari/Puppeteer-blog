@@ -55,36 +55,18 @@ async function generateScreenshot(page, path, isFullPage) {
  */
 async function fetchLinks(page) {
    let jsonData = [];
-   const pageTitle = await page.title().then(data => {return data});
    const tags = await page.$$('a');
-   const options = await page.$$eval('a', tags => {
-      return tags.map(tag => {
-         if(tag.textContent.indexOf('tax') > -1) {
-            return {
-               title: tag.textContent,
-               url: tag.href
-            }
-         }
-      });
-    });
-   jsonData = options.filter(item=>item!=null);
-   //  console.log(options);
-   // for(const tag of tags) {
-   //    const href = await tag.evaluate(element => element.href);
-   //    const labelValue = await tag.evaluate(element=> element.innerText);
-   //    const result = {
-   //       title: labelValue,
-   //       url: href,
-   //    }
-   //    console.log(labelValue.indexOf('tax'));
-   //    if(labelValue.indexOf('tax') > -1) {
-   //       jsonData.push(result);
-   //       // printLog(result);
-   //    }
-   // }
-   // createJSONFile(linksJsonFile,options);
+   for(const tag of tags) {
+      const href = await tag.evaluate(element => element.href);
+      const labelValue = await tag.evaluate(element=> element.innerText);
+      if(labelValue.indexOf('tax') > -1) {
+         jsonData.push({
+            title: labelValue,
+            url: href,
+         });
+      }
+   }
    createJSONFile(linksJsonFile,jsonData);
-
 }
 
 /**
@@ -96,15 +78,15 @@ async function submitForm(page) {
    "=====================================================\n");
    
    await page.click('#super-search-menu-toggle');
-   await page.waitForSelector('#super-search-menu', {hidden: false});
+   await page.waitForSelector('#super-search-menu');
    console.log("\n Search Bar Opened...\n",  
    "=====================================================\n");
-   await generateScreenshot(page,'searchBar');
+   await generateScreenshot(page,'searchBar', false);
 
    await page.type('.gem-c-search__input', searchKeyword);
    await page.keyboard.press('Enter');
-   await page.waitForNavigation({waitUntil: 'networkidle2'});
-   await generateScreenshot(page,'searchResult');
+   await page.waitForNavigation();
+   await generateScreenshot(page,'searchResult', true);
 
    console.log("\n Form Submitted, Screenshot Generated...\n",  
    "=====================================================\n");
@@ -121,6 +103,8 @@ async function performUseCases() {
       const {browser, page} = await startBrowser();
       /**Opening page Url*/
       await page.goto(siteUrl);
+
+      await page.pdf({path: 'result.pdf', format: 'A2'});
       
       /**Scraping Page For Link Url and Labels*/
       await fetchLinks(page);
